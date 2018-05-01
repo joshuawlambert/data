@@ -1,0 +1,55 @@
+library(tuber)
+yt_oauth(app_id="88251182892-qlsq1u2107uauji2ulgmli8emq249rrd.apps.googleusercontent.com",app_secret = "eYfgtnxbpUR4_iqX86cjLejf")
+search<-tuber::yt_search(term = "pepsi",published_before = "2018-06-01T00:00:00Z", published_after = "2014-02-01T00:00:00Z", 
+                         video_caption = "closedCaption",get_all = TRUE)
+
+
+
+
+library(XML)
+i=1
+
+word_vec<-NULL
+for(i in 1:dim(search)[1]){
+url<-paste("http://video.google.com/timedtext?lang=en&v=",as.character(search$video_id[i]),collapse = "",sep = "")
+data<-NA
+try(expr = {data<-xmlTreeParse(file = url)},silent = TRUE)
+if(is.na(data)){next}
+data<-unlist(data$doc$children$transcript)
+transcript<-matrix(data[which(names(data)=="children.text.children.text.value")],ncol=1)
+tokens<-unlist(tokenizers::tokenize_words(x = transcript,lowercase = TRUE))
+tokens_stopped<-tokens[which(!(tokens %in% stopwords::stopwords()))]
+tmp<-cbind(tokens_stopped,i,as.character(search$publishedAt[i]))
+word_vec<-rbind(word_vec,tmp)
+show(i)
+}
+
+
+library(ggplot2)
+library(dplyr)
+library(modeest)
+word_vec<-data.frame(word_vec)
+colnames(word_vec)<-c("tokens","search_id","date_pub")
+others<-c("39","s","t","iâ","gt","ba","â","m")
+word_vec<-word_vec[-which(word_vec$tokens %in% others),]
+
+
+word_vec$date_pub<-as.Date(word_vec$date_pub)
+word_vec$tokens<-as.factor(word_vec$tokens)
+word_vec$search_id<-factor(word_vec$search_id)
+
+word_vec$date_pub<-substr(x = word_vec$date_pub,start = 1,stop = 7)
+tmp2<-word_vec %>% group_by(date_pub) %>% summarise(mode=as.character(names(sort(table(tokens),decreasing = TRUE)[1])),mode2=as.character(names(sort(table(tokens),decreasing = TRUE)[2])))
+tmp3<-word_vec %>% group_by(date_pub) %>% summarise(mode=as.character(sort(table(tokens),decreasing = TRUE)[1]),mode2=as.character(sort(table(tokens),decreasing = TRUE)[2]))
+tmp2$count<-tmp3$mode
+tmp2$count2<-tmp3$mode2
+tmp2$final<-tmp2$mode
+tmp2$final_count<-tmp2$count
+tmp2$final[which(tmp2$mode=="pepsi")]<-tmp2$mode2[which(tmp2$mode=="pepsi")]
+tmp2$final_count[which(tmp2$mode=="pepsi")]<-tmp2$count2[which(tmp2$mode=="pepsi")]
+tmp2$final_count<-as.numeric(tmp2$final_count)
+p<-ggplot(data=tmp2,aes(x=date_pub,y=final_count))+geom_bar(stat="identity") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  xlab("Date Published")+ylab("Count of Each Word") +
+  geom_text(aes(label=final), position=position_dodge(width=0.9), hjust=-.1,angle=90)
+        
