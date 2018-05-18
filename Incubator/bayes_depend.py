@@ -1,5 +1,17 @@
 # Many Thanks to Christopher Strelioff for this code.
 #http://chrisstrelioff.ws/sandbox/2014/12/11/inferring_probabilities_with_a_beta_prior_a_third_example_of_bayesian_calculations.html
+from __future__ import division, print_function
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.stats import beta
+
+# use matplotlib style sheet
+try:
+    plt.style.use('ggplot')
+except:
+    # version of matplotlib might not be recent
+    pass
+
 class likelihood:
     def __init__(self, data):
         """Likelihood for binary data."""
@@ -113,7 +125,7 @@ class prior:
 
         plt.show()
         
-    class posterior:
+class posterior:
     def __init__(self, data, prior):
         """The posterior.
 
